@@ -1,3 +1,38 @@
+locate_items <- function(detectron_results, file_name, 
+                        item = c("all", "table", "species", "layer", "comp", "cols", "rows", "sname")){
+  class_table <- 0
+  class_spec  <- 1
+  class_layer <- 2
+  class_cols  <- 3
+  class_rows  <- 4
+  class_sname <- 5
+  class_comp  <- 6
+  
+  dir_img <-  unique(detectron_results$dir_img)
+  model <- unique(detectron_results$model)
+
+  spec_x_range  <- locate_x_range(detectron_results, file_name, obj_class = class_spec)
+  sname_x_range <- locate_x_range(detectron_results, file_name, obj_class = class_sname)
+  layer_x_range <- locate_x_range(detectron_results, file_name, obj_class = class_layer)
+  comp_x_range  <- locate_x_range(detectron_results, file_name, obj_class = class_cols)
+  comp_y_range  <- locate_y_range(detectron_results, file_name, obj_class = class_rows)
+
+  col_mean_width <- mean_width(detectron_results, file_name, obj_class = class_cols)
+  row_mean_height <- mean_height(detectron_results, file_name, obj_class = class_rows)
+
+  n_cols <- ((comp_x_range[[2]] - comp_x_range[[1]]) / col_mean_width)  |> round(0)
+  n_rows <- ((comp_y_range[[2]] - comp_y_range[[1]]) / row_mean_height) |>  round(0)
+  spec  <- coord_item(spec_x_range , comp_y_range, n_rows = n_rows,                  obj_class = class_spec , file_name = file_name)
+  sname <- coord_item(sname_x_range, comp_y_range, n_rows = n_rows,                  obj_class = class_sname, file_name = file_name)
+  layer <- coord_item(layer_x_range, comp_y_range, n_rows = n_rows,                  obj_class = class_layer, file_name = file_name)
+  comp  <- coord_item(comp_x_range , comp_y_range, n_rows = n_rows, n_cols = n_cols, obj_class = class_comp , file_name = file_name)
+  res <- 
+    dplyr::bind_rows(spec, sname, layer, comp) |>
+    dplyr::mutate(`:=`(dir_img  , dir_img)) |>
+    dplyr::mutate(`:=`(file_name, file_name)) |>
+    dplyr::mutate(`:=`(model    , model))
+  return(res)
+}
 
 #' 
 #' file_name: 画像のファイル名
@@ -134,31 +169,3 @@ coord_item <- function(x_range, y_range,
   return(df)
 }
 
-locate_items <- function(detectron_results, file_name, 
-                        item = c("all", "table", "species", "layer", "comp", "cols", "rows", "sname")){
-  class_table <- 0
-  class_spec  <- 1
-  class_layer <- 2
-  class_cols  <- 3
-  class_rows  <- 4
-  class_sname <- 5
-  class_comp  <- 6
-
-  spec_x_range  <- locate_x_range(detectron_results, file_name, obj_class = class_spec)
-  sname_x_range <- locate_x_range(detectron_results, file_name, obj_class = class_sname)
-  layer_x_range <- locate_x_range(detectron_results, file_name, obj_class = class_layer)
-  comp_x_range  <- locate_x_range(detectron_results, file_name, obj_class = class_cols)
-  comp_y_range  <- locate_y_range(detectron_results, file_name, obj_class = class_rows)
-
-  col_mean_width <- mean_width(detectron_results, file_name, obj_class = class_cols)
-  row_mean_height <- mean_height(detectron_results, file_name, obj_class = class_rows)
-
-  n_cols <- ((comp_x_range[[2]] - comp_x_range[[1]]) / col_mean_width)  |> round(0)
-  n_rows <- ((comp_y_range[[2]] - comp_y_range[[1]]) / row_mean_height) |>  round(0)
-  spec  <- coord_item(spec_x_range , comp_y_range, n_rows = n_rows,                  obj_class = class_spec , file_name = file_name)
-  sname <- coord_item(sname_x_range, comp_y_range, n_rows = n_rows,                  obj_class = class_sname, file_name = file_name)
-  layer <- coord_item(layer_x_range, comp_y_range, n_rows = n_rows,                  obj_class = class_layer, file_name = file_name)
-  comp  <- coord_item(comp_x_range , comp_y_range, n_rows = n_rows, n_cols = n_cols, obj_class = class_comp , file_name = file_name)
-  res <- list(spec = spec, sname = sname, layer = layer, comp = comp)
-  return(res)
-}
