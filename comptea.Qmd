@@ -1,0 +1,452 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+  # install.packages("magick")
+  # install.packages("image.binarization")
+
+```{r setup}
+devtools::load_all(".")
+```
+
+# 傾き補正のみ：未整理
+
+```{r}
+#| eval: false
+
+  # 傾き補正
+  # 入力ファイル
+jpgs <- fs::dir_ls(path = "D:/matu/scan", regexp = "s01114_kinki")
+tmp_dir <- fs::path_temp()
+jpgs <- fs::file_copy(jpgs, tmp_dir, overwrite = TRUE)
+
+  # 作業ディレクトリ
+  # wd <- "D:/matu/work/ToDo/species2vec/detectron2/dataset"
+  # setwd(wd)
+
+  # 傾き補正
+jpgs <- 
+  jpgs |> 
+  purrr::map_chr(deskew_trim_img, fuzz = 40)
+```
+
+
+# 2値化：未整理
+
+
+```{r}
+#| eval: false
+
+  # 作業ディレクトリ
+wd <- "D:/matu/work/ToDo/species2vec/detectron2/dataset"
+tmp <- fs::path_temp()
+
+入力ファイル
+jpgs <- fs::dir_ls(path = tmp_dir, regexp = "dsk_s01114_kinki")
+jpgs <- fs::file_copy(jpgs, tmp_dir, overwrite = TRUE)
+
+二値化
+jpgs <- 
+  jpgs |> 
+  purrr::map_chr(binarization)
+```
+
+# 準備作業を一括で実施：未整理
+
+
+
+```{r}
+#| eval: false
+
+  # 入力ファイル
+jpgs <- fs::dir_ls(path = "D:/matu/scan", regexp = "s01114_kinki")
+jpgs <- fs::file_copy(jpgs, tmp_dir, overwrite = TRUE)
+
+  # 作業ディレクトリ
+setwd(tmp_dir)
+
+  # 傾き補正・二値化
+jpgs <- purrr::map_chr(jpgs, prep_img) # 一括実施
+
+jpgs <- fs::file_copy(jpgs, tmp_dir, overwrite = TRUE)
+len <- length(jpgs)
+
+  # labelmeとdetectron2用にファイルをコピー
+news <- paste0(
+  "D:/matu/work/ToDo/species2vec/detectron2/dataset/", 
+  "kinki_", stringr::str_pad(seq(len), width = 3, side = "left", pad = "0"), ".jpg")
+fs::file_copy(jpgs, news)
+
+  # pngにしてもファイルサイズは同じだった
+```
+
+## アノテーションファイルの変換
+
+labelmeでアノテーション付けした結果をcocoフォーマットに変換する．
+Pythonのlabelme2cocoでも可能．
+rectangleのみ対応．
+
+```{r}
+#| eval: false
+
+  # 参考 D:/matu/work/ToDo/species2vec/detectron2/README.md
+devtools::load_all("d:/matu/work/todo/comptea")
+
+input_dir <- "D:/matu/work/ToDo/species2vec/detectron2/dataset"
+regexp <- "kinki.+json$"
+
+fs::path(input_dir, "dataset.json") |> read_coco()
+labelme2coco(input_dir, regexp)
+
+```
+
+
+
+# Detectron2の結果を図示
+
+## 準備：パッケージの呼び出し
+
+```{r}
+#| eval: false
+
+library(comptea)
+```
+
+
+
+## 検出結果の読み込み
+
+```{r}
+#| eval: true
+
+dir_base <- "D:/matu/work/ToDo/species2vec/detectron2"
+
+dir_dataset <- fs::path(dir_base, "dataset")
+dir_result <- fs::path(dir_base, "output")
+dir_img <- fs::path(dir_base, "dataset")
+
+path_coco <- fs::path(dir_base, "dataset", "dataset.json")
+categories <- 
+  read_coco(path_coco) |> 
+  `$`(_, "categories")
+  
+
+  # model <- "3050_4k"
+model <- "4060_4k_03"
+detectron_results <- read_detectron_results(dir_result, model = model, dir_img = dir_img)
+files <- file_names(detectron_results, "file_name")
+```
+
+
+## 今後の課題：分割された組成表への対応
+
+左右に組成表が分割されているパターンは，未対応
+
+左右に分かれている場合は，layer, species, snameを2つ検出しているはずなので，その画像の確認
+
+
+```{r}
+#| eval: true
+
+detectron_results |>
+  count(file_name, obj_class) |>
+  filter(n == 2) |>
+  arrange(file_name, obj_class) |>
+  print(n = Inf)
+```
+
+## 註釈付け
+
+
+```{r}
+#| eval: true
+
+  # n <- 68
+n <- 75
+# n <- 2
+file_name <- files[n]
+path_img <- fs::path(dir_img, file_name) 
+
+path_img |>
+  gg_draw_image() |>
+  gg_add_box(filter_detectron_results(detectron_results, file_name))
+
+path_gg_detect <- paste0(file_name, "_detect", ".png")
+scale <- 1.5
+ggsave(path_gg_detect, width = 7 * scale, height = 10 * scale)
+shell.exec(path_gg_detect)
+```
+
+## 方針
+
+上手く検出できているものもあれば，そうでないものもある．
+とりあえず，わりと上手く行っているところで，以下の例で進める．
+
+
+## 全体OCR結果の表示
+
+全体の単純なOCRだと文字認識できていないところが多い
+
+特に組成部分
+
+```{r}
+#| eval: true
+
+
+ocr_res <- tesseract::ocr_data(path_img, 
+                               tesseract::tesseract(language = "jpn"))
+
+  # とりあえず，75以上だったら，OCR成功っぽい
+gg_violin <- 
+  ocr_res |>
+  ggplot(aes(x = 1, y = confidence)) +
+  geom_violin()
+
+  # confidence > 60 ちょっと甘いか?
+df <- 
+  ocr_res |>
+  dplyr::filter(confidence > 60) |>
+  tidyr::separate_wider_delim(bbox, delim = ",", names = c("xmin", "ymin", "xmax", "ymax")) |>
+  dplyr::mutate(across(xmin:ymax, as.numeric)) |> 
+  dplyr::mutate(label = word) |> 
+  dplyr::mutate(ymin = ymin + 40)
+  
+
+gg_ocr <- 
+  gg_draw_blank(path_img) |>
+  gg_add_text(df)
+
+gg_ocr <- 
+  gg_draw_image(path_img) |>
+  gg_add_text(df, color = "red")
+gg_ocr
+
+  # 画像サイズ
+  # size <- 
+  #   magick::image_read(path_img) |>
+  #   magick::image_info() |>
+  #   `[`(_, c("width", "height"))
+scale <- 1.5
+path_gg_ocr <- paste0(file_name, "_ocr", ".png")
+ggsave(path_gg_ocr, gg_ocr, width = 7 * scale, height = 10 * scale)
+shell.exec(path_gg_ocr)
+```
+
+
+## 検出結果の調整
+
+検出結果を整理して，いい具合に位置を調整
+ここが大きなポイント
+
+組成表が2列に分割されているものは，未対応
+
+```{r}
+#| eval: true
+
+  # 位置の調整
+locations <- locate_items(detectron_results, file_name = file_name)
+
+```
+
+
+## 検出・調整した結果の表示
+
+検出・調整した結果をもとに，画像として表示
+
+元の画像に検出・調整した分割範囲を表示
+
+```{r}
+#| eval: true
+
+  # ディレクトリ設定
+tmp_dir <- fs::path_temp()
+# shell.exec(tmp_dir)
+
+  # 元の画像と分割範囲の表示
+gg <- 
+  gg_draw_image(path_img) |>
+  gg_add_box(locations)
+
+  # ファイルの保存
+scale <- 1.5
+
+pngs <- fs::path_ext_set(file_name, "png")
+path_gg <- fs::path(tmp_dir, pngs)
+ggsave(path_gg, gg, width = 7 * scale, height = 10 * scale)
+
+# shell.exec(path_gg)
+path_gg_loc <- paste0(file_name, "_loc", ".png")
+ggsave(path_gg_loc, width = 7 * scale, height = 10 * scale)
+```
+
+
+## 部分ごとにOCR
+
+```{r}
+#| eval: true
+
+  # 部分でOCR
+located_text <- ocr_segments(locations)
+
+  # 文字の位置を微調整
+located_text <- 
+  located_text |> 
+  dplyr::mutate(xmin = xmin + 30, ymin = ymin + 50)
+
+  # OCR結果の表示
+gg_seg <- 
+  gg_draw_image(path_img) |>
+  gg_add_text(located_text, color = "red")
+
+scale <- 1.5
+path_gg_seg <- paste0(file_name, "_ocr_seg", ".png")
+ggsave(path_gg_seg, gg_seg, width = 7 * scale, height = 10 * scale)
+shell.exec(path_gg_seg)
+```
+
+## OCRの修正
+
+OCRの内容を修正して表示
+画像形式では，これが完成形
+
+```{r}
+#| eval: true
+
+located_text <- 
+  located_text |>
+  correct_layers() |> # 階層
+  correct_values() |> # 被度・群度
+  correct_snames()    # 種名
+
+  # OCRの修正版
+located_text_mod <- 
+  located_text |>
+  dplyr::mutate(label = dplyr::case_when(
+    obj_class == 1                        ~ "",                          # jpname
+  # value
+    obj_class == 2 & status == "modified" ~ suggest, #  ~ paste0(suggest, " (m)"),
+    obj_class == 2                        ~ suggest,
+  # layer
+    obj_class == 6 & status == "modified" ~ suggest, #  ~ paste0(suggest, " (m)"),
+    obj_class == 6                        ~ suggest,
+  # sname
+    obj_class == 5 & status == "modified" ~ suggest,   #  ~ paste0(suggest, " (m)"),
+    obj_class == 5 & status == "should_check" ~ label, # ~ paste0(label, " (?)"),
+    obj_class == 5 & status == "ok"       ~ label,
+    .default = label
+  ))
+
+gg_mod <- 
+  gg_draw_image(path_img) |>
+  gg_add_text(dplyr::filter(located_text_mod, stringr::str_detect(status, "should_check|modified", negate = TRUE)), 
+              color = "green") |> # OK
+  gg_add_text(dplyr::filter(located_text_mod, stringr::str_detect(status, "modified")), 
+              color = "blue") |>
+  gg_add_text(dplyr::filter(located_text_mod, stringr::str_detect(status, "should_check")), 
+              color = "red")
+
+scale <- 1.5
+path_gg_mod <- paste0(file_name, "_ocr_mod", ".png")
+ggsave(path_gg_mod, gg_mod, width = 7 * scale, height = 10 * scale)
+shell.exec(path_gg_mod)
+```
+
+
+
+## OCRデータを組成表のDFに整理
+
+組成表のDFに整理
+
+
+```{r}
+#| eval: true
+
+  #   被度・群度を "-" で分ける
+  # tidyr::separate_wider_delim()
+
+obj_df <- 
+  read_coco(path_coco) |> 
+  `$`(_, "categories") |> 
+  dplyr::select(obj_class = id, object = name) |> 
+  dplyr::mutate(object = str_replace(object, "species_col", "jpname")) |> 
+  dplyr::bind_rows(tibble::tibble(obj_class = 6, object = "plot"))
+
+  # statusを入れる
+
+  # データフレーム形式に変換
+comp <- add_group(located_text_mod, obj_df)
+df <- comp_df(comp)
+
+df |> 
+  dplyr::filter(value != "") |> 
+  dplyr::select(c(1, 3, 5, 6, 7)) |> 
+  `colnames<-`(c("id", "sname", "layer", "plot", "value")) |> 
+  tidyr::separate_wider_delim(plot, names = c(NA, "plot", NA), delim = "-")
+
+```
+
+
+
+
+```{r}
+  # 削除する?
+  #   value != "" でフィルタしたらほぼ消えるので
+  #   わざわざ削除する必要はなさそう
+  #   "^Ordn\\.?"       # オーダー
+  #   "^Trennarten"     # 区分種
+  #   "^Kenn[-.].+:"    # 識別種
+  #   "^Kennart"        # 標徴種
+  #   "^Begleiter"      # 随伴種
+  #   "^Sonst.+:"       # その他の種
+  #   "Art.+:"          # 上級単位の種
+  #   ":$"
+```
+
+
+
+
+## 以下は古い・不要なコード
+
+```{r}
+#| eval: false
+  # 以下は，OCRの結果を整理するコードの試行錯誤
+n <- 2
+m <- 3
+tibble::tibble(xmin = 1, ymin = 1:m, obj_class = "sp", label = LETTERS[1:m]) |> 
+  dplyr::bind_rows(
+    tibble::tibble(xmin = rep((1+1):(n+1), each = m), 
+                   ymin = rep(1:m, times = n), 
+                   obj_class = "comp", 
+                   label = sample(1:n, n*m, replace = TRUE) |> as.character() )) |>
+  tidyr::pivot_wider(id_cols = ymin, 
+                     names_from = c(obj_class, xmin), 
+                     values_from = label) |> 
+  tidyr::pivot_longer(cols = starts_with("comp"), 
+                      names_to = "plot", 
+                      values_to = "val")
+```
+
+```{r}
+#| eval: false
+  # 画像の切り出しとOCRを分けてやっていたが，
+  #   ocr_segments()で一緒にやることにした
+
+  # 元の画像から，各部分の画像を切り出し
+img_base <- fs::path(dir_img, file_name)
+out_dir <- fs::path_temp()
+ 
+  # crop_segments(img_base, locations$spec, out_dir = out_dir)
+crop_segments(img_base, locations$sname, out_dir = out_dir)
+crop_segments(img_base, locations$layer, out_dir = out_dir)
+crop_segments(img_base, locations$comp, out_dir = out_dir)
+shell.exec(out_dir)
+
+locations <- locate_items(detectron_results, file_name = file_name)
+crop_segments(img_base, locations$sname, out_dir = out_dir)
+
+  # 切り出した画像をOCR
+jpgs <- fs::dir_ls(tmp_dir, regexp = "\\.jpg$")
+ocrs <- purrr::map_chr(jpgs, tesseract::ocr)
+shell.exec(tmp_dir)
+```
