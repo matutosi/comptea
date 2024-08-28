@@ -1,3 +1,9 @@
+#'
+#'
+#'
+#'
+#'
+#'
 locate_items <- function(detectron_results, file_name, 
                         item = c("all", "table", "species", "layer", "comp", "cols", "rows", "sname")){
   class_table <- 0

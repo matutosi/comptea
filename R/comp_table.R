@@ -1,9 +1,9 @@
-  # ojb_class-col_no: 説明
-  # 5        -1     : scientific name
-  # 1        -2     : japanese name
-  # 2        -3     : layer
-  # plot: 6-4
-  #   6始まりはプロット，col_noは4から開始する(1-3は学名・和名・階層)
+#' ojb_class-col_no: 説明
+#' 5        -1     : scientific name
+#' 1        -2     : japanese name
+#' 2        -3     : layer
+#' plot: 6-4
+#'   6始まりはプロット，col_noは4から開始する(1-3は学名・和名・階層)
 add_group <- function(located_text, obj_df){
   df <- 
     located_text |>
@@ -15,7 +15,14 @@ add_group <- function(located_text, obj_df){
   return(df)
 }
 
-  # ピボットで整形
+
+#'
+#'
+#'
+#'
+#'
+#'
+#' ピボットで整形
 comp_df <- function(df){
   df <- 
     df |>
@@ -31,6 +38,12 @@ comp_df <- function(df){
 }
 
 
+#'
+#'
+#'
+#'
+#'
+#'
 correct_layers <- function(located_text){
   class_layer <- 2
   not_layer <- dplyr::filter(located_text, obj_class != class_layer)
@@ -43,6 +56,12 @@ correct_layers <- function(located_text){
   return(corrected)
 }
 
+#'
+#'
+#'
+#'
+#'
+#'
 correct_layer <- function(text){
   corrected <- 
     text |>
@@ -53,6 +72,12 @@ correct_layer <- function(text){
   return(corrected)
 }
 
+#'
+#'
+#'
+#'
+#'
+#'
 correct_values <- function(located_text){
   class_value <- 6
   not_value <- dplyr::filter(located_text, obj_class != class_value)
@@ -65,6 +90,12 @@ correct_values <- function(located_text){
   return(corrected)
 }
 
+#'
+#'
+#'
+#'
+#'
+#'
 check_modify <- function(df){
   df <- 
     df |>
@@ -77,6 +108,12 @@ check_modify <- function(df){
   return(df)
 }
 
+#'
+#'
+#'
+#'
+#'
+#'
 correct_value <- function(text){
   corrected <- 
     text |>
@@ -92,6 +129,12 @@ correct_value <- function(text){
 }
 
 
+#'
+#'
+#'
+#'
+#'
+#'
 correct_snames <- function(located_text){
   class_sname <- 5
   not_sname <- dplyr::filter(located_text, obj_class != class_sname)
@@ -131,6 +174,12 @@ correct_sname <- function(species, reference = NULL, len = 1, min_dist = 3, n = 
 }
 
 
+#'
+#'
+#'
+#'
+#'
+#'
 match_forward <- function(species, reference = NULL){
   if(is.null(reference)){
     reference <- unique(wameicheckr::ref_sc$name_sc)
@@ -147,6 +196,12 @@ match_forward <- function(species, reference = NULL){
   return(match_fw)
 }
 
+#'
+#'
+#'
+#'
+#'
+#'
 suggest_species <- function(species, reference = NULL, min_dist = 3, len = 1, n = 1){
   if(is.null(reference)){
     reference <- unique(wameicheckr::ref_sc$name_sc)
