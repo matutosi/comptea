@@ -36,6 +36,12 @@ rename_cols <- function(detectron_results){
   return(dplyr::rename(detectron_results, any_of(cn)))
 }
 
+#' Extract Unique File Names from Detectron2 Results
+#' 
+#' @param detectron_results A list or data frame containing Detectron2 results.
+#' @param file_name The name of the column containing the file names (default is "file_name").
+#' @return A vector of unique file names.
+#' @export
 file_names <- function(detectron_results, file_name = "file_name"){
   detectron_results[["file_name"]] |>
   unique()
