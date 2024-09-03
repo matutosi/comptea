@@ -1,3 +1,13 @@
+#' Create a Blank ggplot Object with Image Dimensions
+#' Creates a blank ggplot object with the same width and height as a specified image.
+#'
+#' @param path The path to the image file.
+#' @return A ggplot object with a blank canvas.
+#' @examples
+#' image_path <- "path/to/your/image.jpg"
+#' blank_plot <- gg_draw_blank(image_path)
+#'
+#' @export
 gg_draw_blank <- function(path){
   img <- magick::image_read(path)
   width <- magick::image_info(img)$width
