@@ -1,4 +1,5 @@
 #' Create a Blank ggplot Object with Image Dimensions
+#'
 #' Creates a blank ggplot object with the same width and height as a specified image.
 #'
 #' @param path The path to the image file.
@@ -22,6 +23,16 @@ gg_draw_blank <- function(path){
   return(gg)
 }
 
+#' Add Text Annotations to a ggplot
+#'
+#' Adds text annotations to an existing ggplot object based on a data frame.
+#'
+#' @param gg The ggplot object to modify.
+#' @param df A data frame containing the annotation data.
+#' @param ... Additional arguments to be passed to `geom_text()`.
+#' @return The modified ggplot object with the added text annotations.
+#'
+#' @export
 gg_add_text <- function(gg, df, ...){
   # image width and height
   width <- gg$data$width
