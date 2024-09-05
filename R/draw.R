@@ -52,7 +52,26 @@ gg_add_text <- function(gg, df, ...){
 }
 
 
-#' 矩形を描画する関数：baseバージョン(一応動く)
+#' @title Draw a Rectangle on an Image
+#' 
+#' @description Draws a rectangle on an image using Magick.
+#' base version 
+#' @param img The image to draw on.
+#' @param xmin,ymin,xmax,ymax The xy-coordinate of the corners of the rectangle.
+#' @param border The color of the rectangle border (default is "red").
+#' @param lty The line type of the rectangle border (default is "dashed").
+#' @param lwd The line width of the rectangle border (default is 2).
+#' @return The modified image with the rectangle drawn on it.
+#' @examples
+#' # Load an image
+#' image_path <- "path/to/your/image.jpg"
+#' img <- magick::image_read(image_path)
+#'
+#' # Draw a rectangle
+#' img_with_rect <- draw_rect(img, 100, 200, 300, 400)
+#'
+#' # Display or save the modified image
+#' magick::image_show(img_with_rect)
 #' @export
 #' 
 draw_rect <- function(img, xmin, ymin, xmax, ymax,
