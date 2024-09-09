@@ -1,9 +1,35 @@
+#' Add group numbers to located text based on object classes
+#'
+#' This function adds group numbers to located text based on their 
+#'      object classes and spatial arrangement. 
+#'      It joins the located text data with object definitions, 
+#'      removes unnecessary columns, arranges the data by x and y 
+#'      coordinates, and calculates row and column numbers using 
+#'      grouping functions.
+#'
+#' @param located_text A data frame containing located text data with 
+#'                     columns `obj_class`, `xmin`, and `ymin`.
+#' @param obj_df       A data frame containing object definitions with 
+#'                     columns `obj_class`, `xmax`, and `ymax`.
+#' @return             A data frame containing the original located 
+#'                     text data with additional columns `row_no` and `col_no` representing the group numbers.
+#'
+#' @examples
+#' # Example usage:
+#' # Assuming you have located text data and object definitions
+#' located_text <- data.frame(obj_class = c("text1", "text2", "text3"), xmin = c(10, 20, 30), ymin = c(10, 15, 10))
+#' obj_df <- data.frame(obj_class = c("text1", "text2", "text3"), xmax = c(20, 30, 40), ymax = c(20, 20, 20))
+#' add_group(located_text, obj_df)
+#' 
+#' memo
 #' ojb_class-col_no: 説明
 #' 5        -1     : scientific name
 #' 1        -2     : japanese name
 #' 2        -3     : layer
 #' plot: 6-4
 #'   6始まりはプロット，col_noは4から開始する(1-3は学名・和名・階層)
+#' 
+#' @export
 add_group <- function(located_text, obj_df){
   df <- 
     located_text |>
